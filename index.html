@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Учёт Продаж</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0d1f3f" />
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg1: #0d1f3f;
+  --bg2: #1f3f5f;
+  --bg3: #2f5f8f;
+  --text: #fff;
+  --accent: #7b68ee;
+  --accent-hover: #9d8fff;
+  --danger: #d9534f;
+  --danger-hover: #ff4c4c;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 10px;
+
+  /* Многослойный лавалампа-эффект */
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(128,0,128,0.6), transparent 60%),
+    radial-gradient(circle at 80% 40%, rgba(139,0,0,0.6), transparent 60%),
+    radial-gradient(circle at 50% 70%, rgba(75,0,130,0.6), transparent 60%),
+    linear-gradient(270deg, #800080, #4b0082, #8b0000, #800020);
+  background-size: 200% 200%, 200% 200%, 200% 200%, 400% 400%;
+  background-blend-mode: screen;
+
+  animation: 
+    blob1 18s ease-in-out infinite,
+    blob2 22s ease-in-out infinite,
+    blob3 26s ease-in-out infinite,
+    gradientShift 30s ease infinite;
+
+  color: var(--text);
+  font-size: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Движение каждого "пятна" */
+@keyframes blob1 {
+  0%, 100% { background-position: 0% 0%, 80% 40%, 50% 70%, 0% 50%; }
+  50% { background-position: 30% 40%, 80% 40%, 50% 70%, 100% 50%; }
+}
+
+@keyframes blob2 {
+  0%, 100% { background-position: 20% 30%, 0% 0%, 50% 70%, 0% 50%; }
+  50% { background-position: 80% 60%, 0% 0%, 50% 70%, 100% 50%; }
+}
+
+@keyframes blob3 {
+  0%, 100% { background-position: 20% 30%, 80% 40%, 0% 0%, 0% 50%; }
+  50% { background-position: 20% 30%, 80% 40%, 100% 100%, 100% 50%; }
+}
+
+/* Перелив общего фона */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%, 0% 50%, 0% 50%, 0% 50%; }
+  50% { background-position: 100% 50%, 100% 50%, 100% 50%, 100% 50%; }
+  100% { background-position: 0% 50%, 0% 50%, 0% 50%, 0% 50%; }
+}
+
+h1 {
+  margin-bottom: 10px;
+  font-size: 1.8em;
+  text-align: center;
+}
+
+#date {
+  margin-bottom: 15px;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+table {
+  width: 100%;
+  max-width: 600px;
+  border-collapse: collapse;
+  background-color: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  background-color: rgba(255,255,255,0.15);
+}
+
+th, td {
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 1.1em;
+}
+
+td button {
+  padding: 12px 18px;
+  margin: 2px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--accent);
+  color: var(--text);
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.2em;
+}
+
+td button:hover {
+  background-color: var(--accent-hover);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  max-width: 600px;
+}
+
+.controls button {
+  flex: 1 1 45%;
+  min-width: 140px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background-color: var(--accent);
+  color: var(--text);
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+}
+
+.controls button:hover {
+  background-color: var(--accent-hover);
+}
+
+.summary {
+  font-weight: bold;
+  text-align: center;
+  margin-top: 15px;
+  font-size: 1.2em;
+}
+
+#modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 20px;
+  overflow-y: auto;
+  font-size: 18px;
+}
+
+#modalContent {
+  background: rgba(28,44,68,0.95);
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 700px;
+  margin: auto;
+}
+
+.dateItem {
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+  margin: 6px 0;
+  overflow: hidden;
+}
+
+.dateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  background: rgba(255,255,255,0.08);
+}
+
+.dateHeader:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.dateDetails {
+  display: none;
+  padding: 10px;
+}
+
+.delBtn, .downloadBtn {
+  background: var(--danger);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.downloadBtn {
+  background: var(--accent);
+}
+
+.delBtn:hover {
+  background: var(--danger-hover);
+}
+
+.downloadBtn:hover {
+  background: var(--accent-hover);
+}
+
+@media (max-width: 600px) {
+  body {
+    font-size: 16px;
+  }
+  th, td {
+    padding: 8px;
+    font-size: 0.95em;
+  }
+  td button {
+    font-size: 1em;
+    padding: 8px 12px;
+  }
+  .controls button {
+    flex: 1 1 100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>🥤 Учёт продаж напитков</h1>
+<div id="date"></div>
+
+<table id="kvassTable">
+  <thead>
+    <tr>
+      <th>Категория</th>
+      <th>Объём (л)</th>
+      <th>Количество</th>
+      <th>+ / -</th>
+      <th>Сумма (₽)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<div class="summary">
+  Всего литров: <span id="totalLiters">0</span> л<br>
+  Общая сумма: <span id="totalRub">0</span> ₽
+</div>
+
+<div class="controls">
+  <button id="saveBtn">💾 Сохранить смену</button>
+  <button id="exportBtn">📄 Экспорт всех смен</button>
+  <button id="importBtn">📂 Импорт смен</button>
+  <input type="file" id="importFile" accept=".xlsx" style="display:none">
+  <button id="clearBtn">🧹 Очистить всё</button>
+  <button id="historyBtn">📚 История смен</button>
+</div>
+
+<div id="modal">
+  <div id="modalContent">
+    <h3>История смен</h3>
+    <div id="shiftDates"></div>
+  </div>
+</div>
+
+<script>
+const products = [
+  { name: 'Стакан 0.25л', volume: 0.25, extra: 0 },
+  { name: 'Стакан 0.5л',  volume: 0.5,  extra: 0 },
+  { name: 'Бутылка 0.5л', volume: 0.5,  extra: 20 },
+  { name: 'Бутылка 1л',   volume: 1.0,  extra: 20 },
+  { name: 'Бутылка 2л',   volume: 2.0,  extra: 20 },
+];
+const basePrice = 100;
+
+let today = new Date().toLocaleDateString('ru-RU');
+let data = JSON.parse(localStorage.getItem('kvassData') || '{}');
+
+if (!data.date || data.date !== today) {
+  data = {
+    date: today,
+    products: products.map(p => ({ ...p, count: 0 }))
+  };
+  localStorage.setItem('kvassData', JSON.stringify(data));
+}
+
+let hasUnsavedChanges = false;
+
+function saveData() {
+  localStorage.setItem('kvassData', JSON.stringify(data));
+}
+
+function updateTable() {
+  const tbody = document.querySelector('#kvassTable tbody');
+  tbody.innerHTML = '';
+  let totalLiters = 0, totalRub = 0;
+
+  data.products.forEach((p, i) => {
+    const price = p.volume * basePrice + p.extra;
+    const sum = price * p.count;
+    totalLiters += p.volume * p.count;
+    totalRub += sum;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${p.name}</td>
+      <td>${p.volume}</td>
+      <td>${p.count}</td>
+      <td>
+        <button data-index="${i}" data-delta="1">+</button>
+        <button data-index="${i}" data-delta="-1">-</button>
+      </td>
+      <td>${sum.toFixed(2)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  document.getElementById('totalLiters').textContent = totalLiters.toFixed(2);
+  document.getElementById('totalRub').textContent = totalRub.toFixed(2);
+  saveData();
+}
+
+document.querySelector('#kvassTable').addEventListener('click', e => {
+  if (e.target.tagName === 'BUTTON' && e.target.dataset.index) {
+    const i = +e.target.dataset.index;
+    const delta = +e.target.dataset.delta;
+    if (delta < 0 && !confirm(`Уменьшить количество категории "${data.products[i].name}"?`)) return;
+    data.products[i].count = Math.max(0, data.products[i].count + delta);
+    hasUnsavedChanges = true;
+    updateTable();
+  }
+});
+
+function saveShift() {
+  const dateStr = today;
+  const summary = {
+    date: dateStr,
+    products: data.products.map(p => ({ ...p })),
+    totalLiters: document.getElementById('totalLiters').textContent,
+    totalRub: document.getElementById('totalRub').textContent
+  };
+  let allShifts = JSON.parse(localStorage.getItem('kvassShifts') || '[]');
+  allShifts = allShifts.filter(s => s.date !== dateStr);
+  allShifts.push(summary);
+  localStorage.setItem('kvassShifts', JSON.stringify(allShifts));
+  alert('Смена сохранена в историю!');
+  hasUnsavedChanges = false;
+}
+
+function exportShiftsWithConfirm() {
+  if (!confirm('Выгрузить файл Excel со всеми сменами?')) return;
+  const allShifts = JSON.parse(localStorage.getItem('kvassShifts') || '[]');
+  saveToExcel(allShifts, 'kvass_shifts.xlsx');
+}
+
+function saveToExcel(shifts, filename) {
+  const wb = XLSX.utils.book_new();
+  shifts.forEach(shift => {
+    const sheetData = [['Категория', 'Объём (л)', 'Кол-во', 'Цена за шт.', 'Сумма (₽)']];
+    shift.products.forEach(p => {
+      const price = p.volume * basePrice + p.extra;
+      sheetData.push([p.name, p.volume, p.count, price, price * p.count]);
+    });
+    sheetData.push([]);
+    sheetData.push(['ИТОГО', '', '', '', `${shift.totalRub} ₽`]);
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, ws, shift.date);
+  });
+  XLSX.writeFile(wb, filename);
+}
+
+function clearData() {
+  if (confirm('Очистить все данные текущей смены?')) {
+    data.products.forEach(p => p.count = 0);
+    updateTable();
+    hasUnsavedChanges = true;
+  }
+}
+
+function downloadSingleShift(shift) {
+  saveToExcel([shift], `shift_${shift.date}.xlsx`);
+}
+
+function importShifts(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    let allShifts = JSON.parse(localStorage.getItem('kvassShifts') || '[]');
+    workbook.SheetNames.forEach(sheetName => {
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const productsData = rows.slice(1, -2).map(r => ({
+        name: r[0],
+        volume: parseFloat(r[1]),
+        count: parseInt(r[2]),
+        extra: 0
+      }));
+      const totalRub = rows[rows.length - 1][4].replace(' ₽', '');
+      const totalLiters = productsData.reduce((sum, p) => sum + p.volume * p.count, 0).toFixed(2);
+      allShifts.push({ date: sheetName, products: productsData, totalRub, totalLiters });
+    });
+    localStorage.setItem('kvassShifts', JSON.stringify(allShifts));
+    alert('Импорт завершён!');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function openHistoryModal() {
+  const history = JSON.parse(localStorage.getItem('kvassShifts') || '[]');
+  const datesDiv = document.getElementById('shiftDates');
+  datesDiv.innerHTML = '';
+  history.forEach((s, idx) => {
+    const item = document.createElement('div');
+    item.className = 'dateItem';
+
+    const header = document.createElement('div');
+    header.className = 'dateHeader';
+    header.innerHTML = `<span>${s.date}</span>`;
+    header.onclick = () => {
+      details.style.display = details.style.display === 'block' ? 'none' : 'block';
+    };
+
+    const downloadBtn = document.createElement('button');
+    downloadBtn.textContent = 'Скачать';
+    downloadBtn.className = 'downloadBtn';
+    downloadBtn.onclick = ev => {
+      ev.stopPropagation();
+      downloadSingleShift(s);
+    };
+
+    const del = document.createElement('button');
+    del.textContent = 'Удалить';
+    del.className = 'delBtn';
+    del.onclick = ev => {
+      ev.stopPropagation();
+      if (confirm(`Удалить смену за ${s.date}?`)) {
+        let all = JSON.parse(localStorage.getItem('kvassShifts') || '[]');
+        all.splice(idx, 1);
+        localStorage.setItem('kvassShifts', JSON.stringify(all));
+        openHistoryModal();
+      }
+    };
+
+    header.appendChild(downloadBtn);
+    header.appendChild(del);
+
+    const details = document.createElement('div');
+    details.className = 'dateDetails';
+    let html = '<table style="width:100%;border-collapse:collapse;text-align:center">';
+    html += '<tr><th>Категория</th><th>Кол-во</th><th>Объём(л)</th><th>Сумма</th></tr>';
+    s.products.forEach(p => {
+      html += `<tr><td>${p.name}</td><td>${p.count}</td><td>${p.volume}</td><td>${(p.volume * basePrice + p.extra) * p.count}</td></tr>`;
+    });
+    html += `<tr><td colspan="4" style="font-weight:bold;">ИТОГО: ${s.totalRub} ₽, ${s.totalLiters} л</td></tr>`;
+    html += '</table>';
+    details.innerHTML = html;
+
+    item.appendChild(header);
+    item.appendChild(details);
+    datesDiv.appendChild(item);
+  });
+  document.getElementById('modal').style.display = 'block';
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') e.currentTarget.style.display = 'none';
+});
+
+window.addEventListener('beforeunload', function(e) {
+  if (hasUnsavedChanges) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+document.getElementById('saveBtn').onclick = saveShift;
+document.getElementById('exportBtn').onclick = exportShiftsWithConfirm;
+document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
+document.getElementById('importFile').onchange = e => importShifts(e.target.files[0]);
+document.getElementById('clearBtn').onclick = clearData;
+document.getElementById('historyBtn').onclick = openHistoryModal;
+
+document.getElementById('date').textContent = 'Сегодня: ' + today;
+updateTable();
+</script>
+
+</body>
+</html>
