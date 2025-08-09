@@ -429,6 +429,25 @@ function openHistoryModal() {
   const history = JSON.parse(localStorage.getItem('kvassShifts') || '[]');
   const datesDiv = document.getElementById('shiftDates');
   datesDiv.innerHTML = '';
+
+  let grandTotal = 0; 
+  let grandLiters = 0; 
+
+  history.forEach(s => {
+    grandTotal += parseFloat(s.totalRub); 
+    grandLiters += parseFloat(s.totalLiters);
+  });
+
+  // Итоговая надпись вверху
+  if (history.length > 0) {
+    const totalDiv = document.createElement('div');
+    totalDiv.style.fontWeight = 'bold';
+    totalDiv.style.fontSize = '1.3em';
+    totalDiv.style.marginBottom = '12px';
+    totalDiv.textContent = `Общий доход всех смен: ${grandTotal.toFixed(2)} ₽, Общий объём: ${grandLiters.toFixed(2)} л`;
+    datesDiv.appendChild(totalDiv);
+  }
+
   history.forEach((s, idx) => {
     const item = document.createElement('div');
     item.className = 'dateItem';
@@ -479,6 +498,7 @@ function openHistoryModal() {
     item.appendChild(details);
     datesDiv.appendChild(item);
   });
+
   document.getElementById('modal').style.display = 'block';
 }
 
